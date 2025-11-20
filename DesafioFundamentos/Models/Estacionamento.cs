@@ -1,67 +1,82 @@
+using DesafioFundamentos.View;
+
 namespace DesafioFundamentos.Models
 {
     public class Estacionamento
     {
-        private decimal precoInicial = 0;
-        private decimal precoPorHora = 0;
-        private List<string> veiculos = new List<string>();
+        // Alteração: propriedades públicas somente leitura atribuídas no construtor
+        public decimal PrecoInicial { get; }
+        public decimal PrecoPorHora { get; }
 
-        public Estacionamento(decimal precoInicial, decimal precoPorHora)
+        // passa a armazenar Veiculo em vez de string
+        private readonly List<Veiculo> _veiculos = new();
+        public IReadOnlyList<Veiculo> Veiculos => _veiculos.AsReadOnly();
+        public readonly Historico Historico;
+
+        public Estacionamento(decimal precoInicial, decimal precoPorHora, Historico historico = null)
         {
-            this.precoInicial = precoInicial;
-            this.precoPorHora = precoPorHora;
+            PrecoInicial = precoInicial;
+            PrecoPorHora = precoPorHora;
+
+            // TODO: possibilitar salvar e recuperar o histórico de alguma forma
+            Historico = historico ?? new Historico();
         }
 
         public void AdicionarVeiculo()
         {
-            // TODO: Pedir para o usuário digitar uma placa (ReadLine) e adicionar na lista "veiculos"
-            // *IMPLEMENTE AQUI*
-            Console.WriteLine("Digite a placa do veículo para estacionar:");
+            Placa placa = ConsoleUI.SolicitarPlacaParaEstacionar();
+            if (VerificarSeVeiculoExiste(placa))
+            {
+                ConsoleUI.ExibirVeiculoEstacionado(placa.ToString());
+                return;
+            }
+            
+            var veiculo = new Veiculo(placa);
+            _veiculos.Add(veiculo);
+
+            Historico.VeiculoAdicionado(placa.ToString());
+            ConsoleUI.ExibirVeiculoAdicionado(placa.ToString());
         }
 
         public void RemoverVeiculo()
         {
-            Console.WriteLine("Digite a placa do veículo para remover:");
+            Placa placa = ConsoleUI.SolicitarPlacaParaRemover();
+            if (!VerificarSeVeiculoExiste(placa)) return;
 
-            // Pedir para o usuário digitar a placa e armazenar na variável placa
-            // *IMPLEMENTE AQUI*
-            string placa = "";
+            int horas = ConsoleUI.SolicitarHorasEstacionadas();
+            decimal valorTotal = CalcularValorTotalParaVeiculo(horas);
 
-            // Verifica se o veículo existe
-            if (veiculos.Any(x => x.ToUpper() == placa.ToUpper()))
-            {
-                Console.WriteLine("Digite a quantidade de horas que o veículo permaneceu estacionado:");
+            _veiculos.Remove(ObterVeiculoPorPlaca(placa));
 
-                // TODO: Pedir para o usuário digitar a quantidade de horas que o veículo permaneceu estacionado,
-                // TODO: Realizar o seguinte cálculo: "precoInicial + precoPorHora * horas" para a variável valorTotal                
-                // *IMPLEMENTE AQUI*
-                int horas = 0;
-                decimal valorTotal = 0; 
-
-                // TODO: Remover a placa digitada da lista de veículos
-                // *IMPLEMENTE AQUI*
-
-                Console.WriteLine($"O veículo {placa} foi removido e o preço total foi de: R$ {valorTotal}");
-            }
-            else
-            {
-                Console.WriteLine("Desculpe, esse veículo não está estacionado aqui. Confira se digitou a placa corretamente");
-            }
+            ConsoleUI.ExibirVeiculoRemovido(placa.ToString(), horas, valorTotal);
+            Historico.VeiculoRemovido(placa.ToString(), horas, valorTotal);
         }
 
         public void ListarVeiculos()
         {
-            // Verifica se há veículos no estacionamento
-            if (veiculos.Any())
-            {
-                Console.WriteLine("Os veículos estacionados são:");
-                // TODO: Realizar um laço de repetição, exibindo os veículos estacionados
-                // *IMPLEMENTE AQUI*
-            }
-            else
-            {
-                Console.WriteLine("Não há veículos estacionados.");
-            }
+            ConsoleUI.ListarVeiculos(Veiculos);
+            Historico.VeiculosListados(Veiculos);
+        }
+
+        public void ExibirHistórico()
+        {
+            ConsoleUI.ExibirHistórico(Historico);
+        }
+
+        private bool VerificarSeVeiculoExiste(Placa placa)
+        {
+            return _veiculos.Any(v => v.Placa.Equals(placa));
+        }
+
+        private Veiculo ObterVeiculoPorPlaca(Placa placa)
+        {
+            return _veiculos.FirstOrDefault(v => v.Placa.Equals(placa));
+        }
+
+        private decimal CalcularValorTotalParaVeiculo(int horas)
+        {
+            // TODO: Usar padrão strategy e fornecer diferentes cálculos de preço
+            return PrecoInicial + (PrecoPorHora * horas);
         }
     }
 }
